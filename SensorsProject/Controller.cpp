@@ -3,8 +3,8 @@
 
 # define MAX_TEMP_ALLOWED 30.0
 # define MIN_TEMP_ALLOWED 10.0
-# define MAX_HUM_ALLOWED 75.0
-# define MIN_HUM_ALLOWED 50.0
+# define MAX_HUM_ALLOWED 60.0
+# define MIN_HUM_ALLOWED 40.0
 # define MAX_DIST_TEMP 15.0
 # define MAX_DIST_HUM 20.0
 
@@ -18,7 +18,10 @@ d{vector<double>(numTemp, 0), vector<double>(numHum, 0)} {
     }
     // making all vectors the same size
     threads.resize(sensors.size());
-    flags.resize(sensors.size(), false);
+    flags.resize(sensors.size());
+    for (auto& f : flags) {
+        f = make_unique<atomic<bool>>(false);
+    }
 }
 
 Controller::~Controller() {
@@ -26,10 +29,10 @@ Controller::~Controller() {
 }
 
 void Controller::runSensorThreads() {
-    for (int i = 0; i < sensors.size(); ++i) {
-        flags[i] = true;
+    for (int i = 0; i < static_cast<int>(sensors.size()); ++i) {
+        flags[i]->store(true);
         auto lambda = [this, i]() {
-            while (flags[i]) {
+            while (flags[i]->load()) {
                 sensors[i]->readValue();
                 {
                     std::lock_guard<mutex> lock(m); // lock d so that multiple threads won't change it simultaneously
@@ -53,7 +56,7 @@ double Controller::avgCalc(vector<double>& v, int size) {
 
 void Controller::replaceSensor(int indexD, int index, double avgTemp) {
     // stops old thread and joins it
-    flags[index] = false;
+    flags[index]->store(false);
     if (threads[index].joinable()) threads[index].join();
     // new sensor
     sensors[index] = make_unique<TemperatureSensor>();
@@ -62,9 +65,9 @@ void Controller::replaceSensor(int indexD, int index, double avgTemp) {
         d.tempValues[indexD] = avgTemp;
     }
     // starts new thread for new sensor
-    flags[index] = true;
+    flags[index]->store(true);
     auto lambda = [this, index, indexD]() {
-        while (flags[index]) {
+        while (flags[index]->load()) {
             sensors[index]->readValue();
             {
                 std::lock_guard<mutex> lock(m);
@@ -123,8 +126,8 @@ void Controller::startMainThread() {
 
 void Controller::stopThreads() {
     // stops all threads
-    for (int i = 0; i < flags.size(); ++i) {
-        flags[i] = false;
+    for (int i = 0; i < static_cast<int>(flags.size()); ++i) {
+        flags[i]->store(false);
     }
     mainFlag = false;
     // joins all threads

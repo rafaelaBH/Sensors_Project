@@ -15,12 +15,12 @@ class Controller {
 
   private:
     int numTempSensors;
+    atomic<bool> mainFlag;
     int numHumSensors;
     thread mainThread;
-    atomic<bool> mainFlag;
     vector<unique_ptr<Sensor>> sensors;
     vector<thread> threads;
-    vector<atomic<bool>> flags; // using atomic so that the values are immediately updated in all threads
+    vector<unique_ptr<atomic<bool>>> flags; // using atomic so that the values are immediately updated in all threads
     condition_variable isUpdate;
     mutex m;
     struct Data {
@@ -30,7 +30,6 @@ class Controller {
     Data d;
 
     double avgCalc(vector<double>& v, int size);
-    void replaceSensor(int indexD, int index, double newVal);
     void runMainThread();
 
   public:
@@ -41,6 +40,7 @@ class Controller {
     void runSensorThreads(); // start threads for all sensors
     void stopThreads();
     void startMainThread();
+    void replaceSensor(int indexD, int index, double newVal);
 };
 
 

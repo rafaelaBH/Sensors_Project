@@ -31,14 +31,14 @@ class Sensor {
 class TemperatureSensor : public Sensor {
 
   public:
-    TemperatureSensor() : Sensor(0, 0.8, 25.8, 0.9) {}
+    TemperatureSensor() : Sensor(25.8, 0.8, 25.8, 0.9) {}
     ~TemperatureSensor() override = default;
 };
 
 class HumiditySensor : public Sensor {
 
   public:
-    HumiditySensor() : Sensor(0, 0.9, 50.3, 0.5) {}
+    HumiditySensor() : Sensor(50.3, 0.9, 50.3, 0.5) {}
     ~HumiditySensor() override = default;
 };
 
